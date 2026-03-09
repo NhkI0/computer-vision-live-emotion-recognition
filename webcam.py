@@ -1,26 +1,71 @@
 import cv2
 import numpy as np
 
+# Smoothing factor: 0 = no update, 1 = no smoothing
+SMOOTHING = 0.3
+prev_faces = []
+
+
+def smooth_faces(new_faces: list, prev: list, alpha: float) -> list:
+    """Smooth bounding boxes between frames using exponential moving average."""
+    if not prev:
+        return [np.array(f, dtype=float) for f in new_faces]
+
+    smoothed = []
+    for nf in new_faces:
+        # Find closest previous face by center distance
+        nf = np.array(nf, dtype=float)
+        nc = np.array([nf[0] + nf[2] / 2, nf[1] + nf[3] / 2])
+        best = None
+        best_dist = float('inf')
+
+        for pf in prev:
+            pc = np.array([pf[0] + pf[2] / 2, pf[1] + pf[3] / 2])
+            d = np.linalg.norm(nc - pc)
+            if d < best_dist:
+                best_dist = d
+                best = pf
+
+        if best is not None and best_dist < max(nf[2], nf[3]) * 1.5:
+            smoothed.append(best * (1 - alpha) + nf * alpha)
+        else:
+            smoothed.append(nf)
+    return smoothed
+
 
 def adjusted_face_detect(frame: np.ndarray) -> np.ndarray:
+    """Return the square drawn image located on the face of the frame."""
+    global prev_faces
     face_image = frame.copy()
-    face_rect = face_cascade.detectMultiScale(face_image, 1.3, 5)
+    gray = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
+    face_rect = face_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=7, minSize=(80, 80)
+    )
 
-    for (x, y, w, h) in face_rect:
-        cv2.rectangle(face_image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    if len(face_rect) > 0:
+        prev_faces = smooth_faces(list(face_rect), prev_faces, SMOOTHING)
+    else:
+        prev_faces = []
+
+    for (x, y, w, h) in prev_faces:
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        cv2.putText(face_image, "Blank", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, (255, 0, 0), 2)
+        cv2.rectangle(face_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     return face_image
 
 
 face_cascade = cv2.CascadeClassifier('models/haarcascade_frontalface_default.xml')
 
-cv2.namedWindow("preview")
+cv2.namedWindow("Webcam preview")
 vc = cv2.VideoCapture(0)
 
 if vc.isOpened():  # try to get the first frame
     rval, frame = vc.read()
 else:
     rval = False
+    frame = None
 
 while rval:
     cv2.imshow("preview", adjusted_face_detect(frame))
