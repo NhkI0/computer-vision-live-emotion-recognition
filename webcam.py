@@ -49,9 +49,17 @@ def adjusted_face_detect(frame: np.ndarray) -> np.ndarray:
 
     for (x, y, w, h) in prev_faces:
         x, y, w, h = int(x), int(y), int(w), int(h)
+        # Get classified text here
+        classification = "Negative"
+        color = (255, 0, 0)
+        if classification == "Positive":
+            color = (0, 255, 0)
+        elif classification == "Negative":
+            color = (0, 0, 255)
+
         cv2.putText(face_image, "Blank", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                    1, (255, 0, 0), 2)
-        cv2.rectangle(face_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    1, color, 2)
+        cv2.rectangle(face_image, (x, y), (x + w, y + h), color, 2)
 
     return face_image
 
