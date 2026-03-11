@@ -20,4 +20,4 @@ def remove_augmented_images(train_path=TRAIN_PATH):
     return removed_count
 
 if __name__ == "__main__":
-    remove_augmented_images()
+    dataset = EmotionDataset(root_path=TRAIN_PATH, classes=CLASSES)
