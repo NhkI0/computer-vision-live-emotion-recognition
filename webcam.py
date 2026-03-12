@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from models.cnn.predict import predict_emotion
 
 CLAHE = False
 # Smoothing factor: 0 = no update, 1 = no smoothing
@@ -51,16 +52,19 @@ def adjusted_face_detect(im_frame: np.ndarray) -> np.ndarray:
     for (x, y, w, h) in prev_faces:
         x, y, w, h = int(x), int(y), int(w), int(h)
         face_crop = im_frame[y:y + h, x:x + w].copy()
-        # Get classified text here
-        classification = "Negative"
-        color = (255, 0, 0)
+
+        classification, confidence = predict_emotion(face_crop)
+
         if classification == "Positive":
             color = (0, 255, 0)
         elif classification == "Negative":
             color = (0, 0, 255)
+        else:
+            color = (255, 180, 0)
 
-        cv2.putText(face_image, "Blank", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                    1, color, 2)
+        label = f"{classification} ({confidence:.0%})"
+        cv2.putText(face_image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8, color, 2)
         cv2.rectangle(face_image, (x, y), (x + w, y + h), color, 2)
 
     return face_image
